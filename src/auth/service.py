@@ -1,26 +1,28 @@
-import secrets
 import jwt
-from jwt.exceptions import InvalidTokenError
+import uuid
+import hashlib
 
+from jwt.exceptions import InvalidTokenError
 from datetime import datetime, timedelta, timezone
 from fastapi import Depends, HTTPException, status, Cookie
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import ValidationError, EmailStr
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.auth import tools
-from src.auth.schemas import Token, ValidateToken, UserSecret
+from src.auth import jwt_tools
+from src.auth.schemas import AccessToken, UserSecret, FingerPrint, RefreshToken
+from src.auth.sessions import SessionService
 from src.database import get_async_session
 from src.users import models
 from src.settings import settings
 
-from tools.SecretHash import Secret
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/jwt/token")
+# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/jwt/token")
 
 class AuthService:
     COOKIE_SESSION_TOKEN_KEY = "web-app-session-token"
+    COOKIE_SESSION_ID = "session-id"
     
     EXCEPTIONS: dict = {
         "UNAUTHORIZED": HTTPException(
@@ -47,54 +49,110 @@ class AuthService:
         self.__session = session
 
     @classmethod
-    async def create_token(cls, user: models.User) -> Token:
-        random_hex=secrets.token_hex(16)
-        data = UserSecret(
-            id=user.id,
-            random=random_hex,
-            email_verified=user.email_verified
-        )
-        
+    def create_user_hash(cls, user: models.User, user_fingerprint: FingerPrint) -> str:
+        return hashlib.sha256(
+            UserSecret(
+                user_id=user.id,
+                email_verified=user.email_verified,
+                registration_date=user.registration_date,
+                user_role=user.user_role,
+                user_fingerprint=user_fingerprint
+            ).model_dump_json().encode()
+        ).hexdigest()
+
+    @classmethod
+    async def create_access_token(cls, user: models.User) -> str:
         payload = {
-            "sub": await Secret.create(data),
+            "sub": user.id,
             "user": {
-                "id": user.id,
-                "random": random_hex,
-                "email_verified": user.email_verified
+                "user_id": user.id,
+                "email_verified": user.email_verified,
+                "user_role": user.user_role
             }
         }
-
-        encoded_jwt = tools.encode_jwt(payload)
+        encoded_jwt = jwt_tools.encode_jwt(payload)
         return encoded_jwt
     
-    @classmethod
-    async def validate_token(cls, token: str) -> ValidateToken:
+
+    async def validate_access_token(self, token: str) -> AccessToken:
         try:
-            payload = tools.decode_jwt(token)
+            payload = jwt_tools.decode_jwt(token)
             if payload.get("sub") is None:
-                raise cls.EXCEPTIONS["UNAUTHORIZED"]
+                raise self.EXCEPTIONS["UNAUTHORIZED"]
         except jwt.ExpiredSignatureError:
-            # TODO Update token on expire
-            ...
+            raise HTTPException(
+                status_code=status.HTTP_303_SEE_OTHER, 
+                detail="Refrash token validation"
+            )
         except InvalidTokenError:
-            raise cls.EXCEPTIONS["UNAUTHORIZED"]
+            raise self.EXCEPTIONS["UNAUTHORIZED"]
 
         try:
-            user = ValidateToken.model_validate(payload.get("user"))
+            user = AccessToken.model_validate(payload.get("user"))
         except ValidationError:
-            raise cls.EXCEPTIONS["UNAUTHORIZED"]
-
-        if not await Secret.verify(payload.get("sub"), user):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Authentication error! Provided user data missmatch." \
-                    "For security reasons, please consider logging in again.",
-                headers={
-                    "www-Authenticate": 'Bearer'
-                }
-            )
+            raise self.EXCEPTIONS["UNAUTHORIZED"]
 
         return user
+    
+    async def create_refresh_token(self, user: models.User, user_fingerprint: FingerPrint) -> str:
+        session_id = str(uuid.uuid4())
+        user_secret = self.create_user_hash(user, user_fingerprint)
+        payload = {
+            "sub": user.id,
+            "user": {
+                "session_id": session_id,
+                "user_secret": user_secret 
+            }
+        }
+        exp_timedelta = timedelta(days=settings.auth_jwt.refresh_token_expire_days)
+        encoded_jwt = jwt_tools.encode_jwt(payload, expire_timedelta=exp_timedelta)
+
+        await SessionService().add_refresh_token(user.id, session_id, encoded_jwt)
+
+        return session_id
+    
+    async def validate_refresh_token(self, user_id: int, session_id: str, user_fingerprint: FingerPrint):
+        token = await SessionService().get_refresh_token(user_id, session_id)
+        if not token:
+            raise self.EXCEPTIONS["UNAUTHORIZED"]
+        
+        try:
+            payload = jwt_tools.decode_jwt(token)
+            if payload.get("sub") is None:
+                raise self.EXCEPTIONS["UNAUTHORIZED"]
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token expired. Please relogin."
+            )
+        
+        try:
+            _user = RefreshToken.model_validate(payload.get("user"))
+        except ValidationError:
+            raise self.EXCEPTIONS["UNAUTHORIZED"]
+        
+        stmt = select(models.User).where(models.User.id == user_id)
+        user = (await self.__session.execute(stmt)).scalar_one_or_none()
+        
+        if not user:
+            raise self.EXCEPTIONS["UNAUTHORIZED"]
+        
+        user_secret = self.create_user_hash(user, user_fingerprint)
+
+        if not user_secret == _user.user_secret:
+            raise self.EXCEPTIONS["UNAUTHORIZED"]
+        
+        await SessionService().del_user_session(user.id, session_id)
+
+        return await self.create_tokens(user, user_fingerprint)
+
+    
+    async def create_tokens(self, user: models.User, user_fingerprint: FingerPrint) -> dict[str, str]:
+        result = {
+            "access-token": await self.create_access_token(user),
+            "session-id": await self.create_refresh_token(user, user_fingerprint)
+        }
+        return result
     
     async def __get(self, username: str | None, email: EmailStr | None = None) -> models.User:
         if username is None and email is None:
@@ -120,23 +178,20 @@ class AuthService:
 
         return user
     
-    async def authenticate(self, username: str, password: str) -> Token:
+    async def authenticate(self, username: str, password: str, fingerprint: FingerPrint) -> str:
         try:
             user = await self.__get(username=username)
         except HTTPException:
             raise self.EXCEPTIONS["INCORRECT_DATA"]
         
-        if not (tools.validate_password(password, user.hashed_password)):
+        if not (jwt_tools.validate_password(password, user.hashed_password)):
             raise self.EXCEPTIONS["INCORRECT_DATA"]
         
-        return await self.create_token(user)
-    
-
-# async def get_current_user_bearer(token: str = Depends(oauth2_scheme)) -> ValidateToken:
-#     return await AuthService.validate_token(token)
+        return await self.create_tokens(user, fingerprint)
 
 
 async def get_current_user(
-        token: str = Cookie(alias=AuthService.COOKIE_SESSION_TOKEN_KEY)
-) -> ValidateToken:
-    return await AuthService.validate_token(token)
+        token: str = Cookie(alias=AuthService.COOKIE_SESSION_TOKEN_KEY),
+        service: AuthService = Depends()
+) -> AccessToken:
+    return await service.validate_access_token(token)

@@ -22,7 +22,7 @@ def get_connection() -> RedisBackend:
 
 class CacheDecorator:
     """Simple caching decorator for functions."""
-    FORMATER = "_deco_{}::{}"
+    FORMATER = "{}_deco_::{}"
     
     def __init__(
         self, 
@@ -89,7 +89,7 @@ class CacheDecorator:
 
 
 class CacheTool:
-    FORMATER = "_service_{}::{}"
+    FORMATER = "{}_service_::{}"
 
     def __init__(
         self, 
@@ -99,33 +99,33 @@ class CacheTool:
         self.name = name
         self.redis = redis
 
-    async def __get_key(self, key: str) -> str:
+    async def _get_key(self, key: str) -> str:
         cache_key = from_string(key)
         return self.FORMATER.format(self.name, cache_key)
         
 
     async def set_data(self, key: str, value: Any) -> None: 
         await self.redis.set(
-            (await self.__get_key(key)),
+            (await self._get_key(key)),
             PickleCoder.encode(value)
         )
 
     async def set_with_exp(self, key: str, value: Any, exp: int=3600) -> None:
         await self.redis.set(
-            (await self.__get_key(key)),
+            (await self._get_key(key)),
             PickleCoder.encode(value),
             expire=exp
         )
 
     async def get_data(self, key: str) -> Any:
-        data = await self.redis.get(await self.__get_key(key))
+        data = await self.redis.get(await self._get_key(key))
         if data:
             return PickleCoder.decode(data)
         else:
             return None
     
     async def del_data(self, key: str) -> None:
-        await self.redis.delete(await self.__get_key(key))
+        await self.redis.delete(await self._get_key(key))
     
     async def clear_data(self):
-        await self.redis.clear(f"_service_{self.name}")
+        await self.redis.clear(f"{self.name}_service_")

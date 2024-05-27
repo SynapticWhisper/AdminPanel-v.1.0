@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.auth import tools
+from src.auth import jwt_tools
 from src.database import get_async_session
 from src.users import models
 from src.users.schemas import CreateUser, UpdateUser, UpdatePassword
@@ -19,7 +19,7 @@ class UserCRUD:
             username=user_data.username,
             email=user_data.email,
             birth_date=user_data.birth_date,
-            hashed_password=tools.hash_password(user_data.password)
+            hashed_password=jwt_tools.hash_password(user_data.password)
         )
         try:
             self.__session.add(user)
@@ -72,10 +72,10 @@ class UserCRUD:
     async def update_password(self, user_id: int, user_data: UpdatePassword) -> HTTPException:
         user = await self.read(user_id)
 
-        if not tools.validate_password(user_data.old_password, user.hashed_password):
+        if not jwt_tools.validate_password(user_data.old_password, user.hashed_password):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect password.")
 
-        user.hashed_password = tools.hash_password(user_data.new_password)
+        user.hashed_password = jwt_tools.hash_password(user_data.new_password)
         await self.__session.commit()
 
         return HTTPException(status_code=status.HTTP_200_OK)

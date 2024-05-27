@@ -1,7 +1,5 @@
 import sqlalchemy as sa
-
 from datetime import date, datetime
-
 from src.database import Base
 
 
@@ -14,7 +12,8 @@ class User(Base):
     username: str = sa.Column(sa.String, unique=True, nullable=False)
     email: str = sa.Column(sa.String, unique=True, nullable=False)
     hashed_password: str = sa.Column(sa.String, nullable=False)
-    
+    user_role: str = sa.Column(sa.String, nullable=False, default="user")
+
     # Date fields
     birth_date: date = sa.Column(sa.Date, nullable=False)
     registration_date: date = sa.Column(sa.Date, nullable=False, default=date.today)
@@ -28,6 +27,3 @@ class User(Base):
     email_verified: bool = sa.Column(sa.Boolean, nullable=False, default=False)
     mailing_allowed: bool = sa.Column(sa.Boolean, nullable=False, default=True)
     telegram_mailing_allowed: bool = sa.Column(sa.Boolean, nullable=False, default=True)
-
-
-

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, status
-from src.auth.schemas import ValidateToken
+from src.auth.schemas import AccessToken
 from src.auth.service import get_current_user
 
 from src.users.schemas import CreateUser, User
@@ -20,7 +20,7 @@ async def register(
 
 @router.get("/me", response_model=User)
 async def get_me(
-    user: ValidateToken = Depends(get_current_user),
+    user: AccessToken = Depends(get_current_user),
     service: UserCRUD = Depends(),
 ):
-    return await service.read(user.id)
+    return await service.read(user.user_id)
