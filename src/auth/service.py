@@ -21,8 +21,10 @@ from src.settings import settings
 # oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/jwt/token")
 
 class AuthService:
-    COOKIE_SESSION_TOKEN_KEY = "web-app-session-token"
-    COOKIE_SESSION_ID = "session-id"
+    COOKIE_SESSION_TOKEN: str = "web-app-session-token"
+    COOKIE_SESSION: str = "web-app-session-id"
+    COOKIE_TOKEN_KEY: str = "access-token"
+    COOKIE_SESSION_KEY: str = "session-id"
     
     EXCEPTIONS: dict = {
         "UNAUTHORIZED": HTTPException(
@@ -47,7 +49,7 @@ class AuthService:
 
     def __init__(self, session: AsyncSession = Depends(get_async_session)):
         self.__session = session
-
+    
     @classmethod
     def create_user_hash(cls, user: models.User, user_fingerprint: FingerPrint) -> str:
         return hashlib.sha256(
@@ -59,7 +61,7 @@ class AuthService:
                 user_fingerprint=user_fingerprint
             ).model_dump_json().encode()
         ).hexdigest()
-
+    
     @classmethod
     async def create_access_token(cls, user: models.User) -> str:
         payload = {
@@ -73,7 +75,6 @@ class AuthService:
         encoded_jwt = jwt_tools.encode_jwt(payload)
         return encoded_jwt
     
-
     async def validate_access_token(self, token: str) -> AccessToken:
         try:
             payload = jwt_tools.decode_jwt(token)
@@ -86,12 +87,12 @@ class AuthService:
             )
         except InvalidTokenError:
             raise self.EXCEPTIONS["UNAUTHORIZED"]
-
+        
         try:
             user = AccessToken.model_validate(payload.get("user"))
         except ValidationError:
             raise self.EXCEPTIONS["UNAUTHORIZED"]
-
+        
         return user
     
     async def create_refresh_token(self, user: models.User, user_fingerprint: FingerPrint) -> str:
@@ -106,9 +107,7 @@ class AuthService:
         }
         exp_timedelta = timedelta(days=settings.auth_jwt.refresh_token_expire_days)
         encoded_jwt = jwt_tools.encode_jwt(payload, expire_timedelta=exp_timedelta)
-
         await SessionService().add_refresh_token(user.id, session_id, encoded_jwt)
-
         return session_id
     
     async def validate_refresh_token(self, user_id: int, session_id: str, user_fingerprint: FingerPrint):
@@ -138,19 +137,16 @@ class AuthService:
             raise self.EXCEPTIONS["UNAUTHORIZED"]
         
         user_secret = self.create_user_hash(user, user_fingerprint)
-
         if not user_secret == _user.user_secret:
             raise self.EXCEPTIONS["UNAUTHORIZED"]
         
         await SessionService().del_user_session(user.id, session_id)
-
         return await self.create_tokens(user, user_fingerprint)
-
     
     async def create_tokens(self, user: models.User, user_fingerprint: FingerPrint) -> dict[str, str]:
         result = {
-            "access-token": await self.create_access_token(user),
-            "session-id": await self.create_refresh_token(user, user_fingerprint)
+            self.COOKIE_TOKEN_KEY: await self.create_access_token(user),
+            self.COOKIE_SESSION_KEY: await self.create_refresh_token(user, user_fingerprint)
         }
         return result
     
@@ -191,7 +187,7 @@ class AuthService:
 
 
 async def get_current_user(
-        token: str = Cookie(alias=AuthService.COOKIE_SESSION_TOKEN_KEY),
+        token: str = Cookie(alias=AuthService.COOKIE_SESSION_TOKEN),
         service: AuthService = Depends()
 ) -> AccessToken:
     return await service.validate_access_token(token)

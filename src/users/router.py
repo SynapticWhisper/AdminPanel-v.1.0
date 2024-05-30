@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Body
 from src.auth.schemas import AccessToken
 from src.auth.service import get_current_user
 
@@ -15,6 +15,7 @@ async def register(
     new_user: CreateUser = Depends(),
     service: UserCRUD = Depends(),
 ):
+    print(1)
     return await service.create(new_user)
 
 

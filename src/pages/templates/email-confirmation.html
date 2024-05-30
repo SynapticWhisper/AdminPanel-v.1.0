@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/email-confirmation.css') }}">
+{% endblock %}
+
+{% block content %}
+<header>
+    <div class="sub-header">
+        <div class="logo">
+            <img src="{{ url_for('static', path='images/white/admin_panel.svg') }}" alt="">
+            <h1>A<span class="colored-text">Panel</span></h1>
+        </div>
+        <!--
+            Logout сделать кнопкой для ПК и тд отображать подпись "LogOut",
+            для телефонов и тд просто иконка с анимацией
+        -->
+        <a class="menu-item" href="#"><img src="{{ url_for('static', path='images/white/power_settings_new.svg') }}" alt=""></a>
+    </div>
+</header>
+<main>
+    <div class="main-container">
+        <div class="confirmation-form">
+            <h2>Email Confirmation</h2>
+            <p>Please enter the confirmation code sent to your email.</p>
+            <form class="confirmation-field"> <!-- Подставьте здесь ссылку на обработчик формы -->
+                <input class="confirmation-code" type="text" name="confirmation-code" id="confirmation-code" placeholder="Confirmation Code" required>
+                <div class="resend-code">
+                    <button type="button" class="green-btn" id="resend-code" disabled="">Send new code</button>
+                    <span class="timer" id="timer">0:42</span>
+                </div>
+                <button type="submit" class="blue-btn" disabled="">Confirm</button>
+            </form>
+        </div>
+    </div>
+</main>
+{% endblock %}

@@ -1,0 +1,380 @@
+/* "Элементы логотипа */
+
+.logo-container {
+    margin: 12px 20%;
+    display: grid;
+}
+
+.logo-header {
+    filter: drop-shadow(3px 3px 10px #2655cf);
+    grid-row: 1/1;
+    padding: 20px;
+    border-top: 2px solid #2655cf;
+    border-left: 2px solid #2655cf;
+    border-right: 2px solid #2655cf;
+}
+
+.logo-header img {
+    position: relative;
+    top: 50%;
+    left: 50%;
+    transform: translateY(-50%) translateX(-50%);
+    width: 80px;
+}
+
+.logo-main {
+    grid-row: 2/2;
+    padding: 20px 0;
+    border-left: 2px solid transparent;
+    border-right: 2px solid transparent;
+}
+
+.logo-main h1 {
+    position: relative;
+    font-size: 20pt;
+    text-align: center;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.logo-footer {
+    filter: drop-shadow(3px 3px 10px #2655cf);
+    grid-row: 3/3;
+    padding: 20px;
+    border-bottom: 2px solid #2655cf;
+    border-left: 2px solid #2655cf;
+    border-right: 2px solid #2655cf;
+    text-align: center;
+}
+
+.logo-footer .slogan {
+    padding-bottom: 10px;
+    font-size: 9pt;
+}
+
+.logo-footer .year {
+    margin: 0 20%;
+    padding-top: 10px;
+    border-top: 2px solid #fff;
+}
+
+/* Кнопки Регистрация/Авторизация  */
+
+.btn-container {
+    margin: 12px 20%;
+    display: flex;
+    justify-content: space-between;
+}
+
+.btn-container button {
+    width: 49%;
+}
+
+button {
+    background-color: transparent;
+}
+
+.blue-btn, .green-btn {
+    cursor: pointer;
+    font-size: 12pt;
+    font-weight: bold;
+    border-radius: 7px;
+    padding: 12px;
+}
+
+#signin-btn,
+#signup-btn {
+    margin-top: 12px;
+    width: 100%;
+}
+
+/* Цвета кнопок */
+
+.green-btn {
+    color: #6abf69;
+    border: 2px solid #6abf69;
+    transform: scale(1);
+    transition: transform 0.3s;
+}
+
+.blue-btn {
+    color: #2970db;
+    border: 2px solid #2655cf;
+    transform: scale(1);
+    transition: transform 0.3s;
+}
+
+.green-btn:focus, .blue-btn:focus {
+    outline: none;
+}
+
+
+/* Всплывающие элементы */
+
+
+.signin-popup,
+.signup-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(51, 51, 51, 0.7);
+    display: table;
+    opacity: 1;
+    transform:scale(1);
+    transition: opacity 0.2s;
+}
+
+.signup-popup.closed,
+.signin-popup.closed {
+    opacity: 0;
+    transform: scale(0);
+    transition: opacity 0.2s;
+}
+
+.login-container,
+.signup-container {
+    display: table-cell;
+    height: 100%;
+    vertical-align: middle;
+}
+
+.login-form,
+.signup-form {
+    max-width: 320px;
+    margin: 0 auto;
+    background-color: #444;
+    padding: 20px 12px;
+    border-radius: 15px;
+    border: 2px solid #555;
+}
+
+.login-form h2,
+.signup-form  h2 {
+    display: table-row;
+    text-align: center;
+}
+
+.login-form form,
+.signup-form form {
+    margin-top: 12px;
+}
+
+.userinfo-input {
+    width: 100%;
+    padding: 10px 12px;
+    margin: 8px 0;
+    box-sizing: border-box;
+    background-color: #666;
+    outline: none;
+    color: #fff;
+    font-size: 14pt;
+    border-radius: 12px;
+    border: 2px solid #555;
+    transform: scale(1);
+    transition: transform 0.3s;
+}
+
+.userinfo-input.incorrect {
+    border: 2px solid #ce0000;
+}
+
+#date-input::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+}
+
+.userinfo-input::-webkit-input-placeholder {
+    color: #ccc;
+}
+
+.userinfo-input::-moz-placeholder {
+    color: #ccc
+}
+
+.userinfo-input:focus {
+    border: 2px solid #2655cf;
+    transform: scale(1.03);
+    transition: transform 0.3s;
+}
+
+.userinfo-input.incorrect:focus {
+    border: 2px solid #ce0000;
+    transform: scale(1.03);
+    transition: transform 0.3s;
+}
+
+#close-signin,
+#close-signup {
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    border: none;
+    display: table-row;
+    float: right;
+    transform: scale(1);
+    transition: transform 0.3s;
+}
+
+#close-signin:focus,
+#close-signup:focus {
+    outline: none;
+}
+
+#close-signin img,
+#close-signup img {
+    width: 29px;
+    height: 29px;
+}
+
+.checkbox-container {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.remember-checkbox {
+    float: left;
+    width: 20px;
+    height: 20px;
+    margin: 8px 10px;
+}
+
+.checkbox-container p {
+    margin: 8px 0;
+}
+
+#sign-in-error-message,
+#sign-up-error-message,
+#sign-up-success-message {
+    font-size: 10pt;
+    font-weight: bold;
+}
+
+#sign-in-error-message,
+#sign-up-error-message {
+    color: red;
+}
+
+#sign-up-success-message {
+    color: #6abf69;
+}
+
+@media (min-width: 720px) {
+    .logo-container {
+        max-width: 360px;
+        margin: 12px auto;
+    }
+
+    .btn-container {
+        max-width: 360px;
+        margin: 12px auto;
+    }
+    .login-form,
+    .signup-form {
+        max-width: 360px;
+    }
+}
+
+@media (min-width: 992px) {
+    .logo-container {
+        max-width: 360px;
+        margin: 12px auto;
+    }
+
+    .logo-header img {
+        width: 100px;
+    }
+
+    .btn-container {
+        max-width: 360px;
+        margin: 12px auto;
+    }
+    .login-form,
+    .signup-form {
+        max-width: 360px;
+    }
+}
+
+@media (min-width: 1200px) {
+    .logo-container {
+        max-width: 360px;
+        min-height: 440px;
+        margin: 12px auto;
+    }
+
+    .logo-header img {
+        width: 120px;
+    }
+
+    .btn-container {
+        max-width: 360px;
+        margin: 12px auto;
+    }
+
+    .logo-main h1 {
+        font-size: 24pt;
+    }
+
+    .logo-footer .slogan {
+        font-size: 10pt;
+    }
+
+    .login-form,
+    .signup-form {
+        max-width: 360px;
+    }
+}
+
+@media (hover: hover) {
+    .green-btn:hover {
+        filter: drop-shadow(3px 3px 10px #6abf69);
+        transform: scale(1.03);
+        transition: transform 0.3s;
+    }
+
+    .blue-btn:hover {
+        filter: drop-shadow(3px 3px 10px #2655cf);
+        transform: scale(1.03);
+        transition: transform 0.3s;
+    }
+
+    .userinfo-input:hover {
+        border: 2px solid #2655cf;
+        transform: scale(1.03);
+        transition: transform 0.3s;
+    }
+
+    .userinfo-input.incorrect:hover {
+        border: 2px solid #ce0000;
+        transform: scale(1.03);
+        transition: transform 0.3s;
+    }
+
+    #close-signin:hover,
+    #close-signup:hover {
+        filter: drop-shadow(3px 3px 10px #2655cf);
+        transform: scale(1.1);
+        transition: transform 0.3s;
+    }
+}
+
+@media (hover: none) {
+    .green-btn:active {
+        filter: drop-shadow(3px 3px 10px #6abf69);
+        transform: scale(1.03);
+        transition: transform 0.3s;
+    }
+
+    .blue-btn:active {
+        filter: drop-shadow(3px 3px 10px #2655cf);
+        transform: scale(1.03);
+        transition: transform 0.3s;
+    }
+
+    #close-signin:active,
+    #close-signup:active {
+        filter: drop-shadow(3px 3px 10px #2655cf);
+        transform: scale(1.1);
+        transition: transform 0.3s;
+    }
+}

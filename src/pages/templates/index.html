@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/index.css') }}">
+{% endblock %}
+
+{% block content %}
+<header>
+    <div class="sub-header">
+        <div class="logo">
+            <img src="{{ url_for('static', path='images/white/admin_panel.svg') }}" alt="">
+            <h1>A<span class="colored-text">Panel</span></h1>
+        </div>
+    </div>
+</header>
+<main>
+    <div class="main-container">
+        <div class="logo-container">
+            <div class="logo-header">
+                <img src="{{ url_for('static', path='images/white/admin_panel.svg') }}" alt="calendar">
+            </div>
+            <div class="logo-main">
+                <h1>A<span class="colored-text">Panel</span></h1>
+            </div>
+            <div class="logo-footer">
+                <p class="slogan">Your Path to Productivity!</p>
+                <p class="year">2024</p>
+            </div>
+        </div>
+        <div class="btn-container">
+            <button class="green-btn" id="sign-up">Sign Up</button>
+            <button class="blue-btn" id="sign-in">Sign In</button>
+        </div>
+    </div>
+    <!-- Всплывающее окно входа-->
+    <div class="signin-popup closed">
+        <div class="login-container">
+            <div class="login-form">
+                <button type="button" id="close-signin">
+                    <img src="{{ url_for('static', path='images/white/cancel.svg') }}" alt="cancel">
+                </button>
+                <h2>Sign<span class="colored-text">In</span></h2>
+                <form id="signin-form">
+                    <input type="text" name="username" class="userinfo-input" id="username" placeholder="username">
+                    <input type="password" name="password" class="userinfo-input" id="password" placeholder="password">
+                    <p id="sign-in-error-message"></p>
+                    <button class="blue-btn" type="submit" id="signin-btn">Sign In</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Всплывающее окно регистрации -->
+    <div class="signup-popup closed">
+        <div class="signup-container">
+            <div class="signup-form">
+                <button type="button" id="close-signup">
+                    <img src="{{ url_for('static', path='images/white/cancel.svg') }}" alt="cancel">
+                </button>
+                <h2>Sign<span class="colored-text">Up</span></h2>
+                <form id="signup-form">
+                    <input type="text" name="username" class="userinfo-input" id="username-input" placeholder="username">
+                    <input type="email" name="email" class="userinfo-input" id="email-input" placeholder="example@address.com">
+                    <input type="date" name="birth_date" class="userinfo-input" id="date-input" src="images/white/calendar_today.svg">
+                    <input type="password" name="password" class="userinfo-input" id="password-input" placeholder="password">
+                    <input type="password" name="conf-password" class="userinfo-input" id="password-confirmation" placeholder="confirm password">
+                    <p id="sign-up-error-message"></p>
+                    <p id="sign-up-success-message"></p>
+                    <button class="green-btn" type="submit" id="signup-btn">Sign Up</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block script %}
+<script src="{{ url_for('static', path='js/index.js') }}"></script>
+{% endblock %}

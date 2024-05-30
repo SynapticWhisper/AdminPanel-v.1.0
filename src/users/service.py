@@ -24,9 +24,9 @@ class UserCRUD:
         try:
             self.__session.add(user)
             await self.__session.commit()
-            return HTTPException(status_code=status.HTTP_201_CREATED)
+            return HTTPException(status_code=status.HTTP_201_CREATED, detail="Successfully created!\nNow please login with your credentials!")
         except IntegrityError as e:
-            if 'username' is str(e.orig):
+            if 'username' in str(e.orig):
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
                     detail="This username is already in use. Please choose another username."

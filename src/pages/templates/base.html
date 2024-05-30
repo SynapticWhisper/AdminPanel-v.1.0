@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/main.css') }}">
+    {% block head %}{% endblock %}
+    <title>A.Panel</title>
+</head>
+<body>
+    {% block content %}{% endblock %}
+    <footer>
+        <p>&copy; 2024, ToDo<span class="colored-text">App</span><br>All trademarks and registered trademarks appearing on this site are the property of their respective owners.</p>
+    </footer>
+    {% block script %}{% endblock %}
+</body>
+</html>

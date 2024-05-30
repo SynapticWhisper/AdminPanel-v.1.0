@@ -1,31 +1,35 @@
 from annotated_types import MinLen, MaxLen
+from dataclasses import dataclass
 from datetime import date, datetime
 from pydantic import BaseModel, EmailStr, Field
 from typing import Annotated, Optional
 from fastapi import Form
 from fastapi.security import OAuth2PasswordRequestForm
 
-
-class CreateUser(BaseModel, OAuth2PasswordRequestForm):
-    username: Annotated[str, MinLen(3), MaxLen(20)] = Form(
+@dataclass
+class CreateUser:
+    username: str = Form(
+        ...,
         title="Username",
         description="Your unique username",
-        example="example@email.ru",
+        example="username",
         min_length=3,
         max_length=20,
     )
     email: EmailStr = Form(
+        ...,
         title="Email",
-        description="New username or keep field empty if it is not changing",
+        description="Your email address.",
         example="example@email.ru"
     )
-    birth_date: date = Field(
+    birth_date: date = Form(
+        ...,
         title="Birth date",
         description="Your birth date.",
         examples=["YYYY-MM-DD"],
-        default=date(year=1990, month=1, day=1),
     )
-    password: Annotated[str, MinLen(6), MaxLen(20)] = Form(
+    password: str = Form(
+        ...,
         title="Password",
         description="Choose security password",
         example="password",

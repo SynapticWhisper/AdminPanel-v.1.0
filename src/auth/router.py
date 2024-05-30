@@ -16,6 +16,7 @@ def get_finger_print(request: Request) -> FingerPrint:
         accept_encoding=request.headers.get("accept-encoding")
     )
 
+
 @router.post("/v1/login", status_code=status.HTTP_200_OK)
 async def cookie_login(
     request: Request,
@@ -24,9 +25,19 @@ async def cookie_login(
     service: AuthService = Depends()
 ):
     fingerprint = get_finger_print(request)
-    token = await service.authenticate(user_data.username, user_data.password, fingerprint)
-    response.set_cookie(service.COOKIE_SESSION_TOKEN_KEY, token["access-token"], httponly=True, samesite="Strict")
-    response.set_cookie(service.COOKIE_SESSION_ID, token["session-id"], httponly=True, samesite="Strict")
+    tokens = await service.authenticate(user_data.username, user_data.password, fingerprint)
+    response.set_cookie(
+        service.COOKIE_SESSION_TOKEN,
+        tokens[service.COOKIE_TOKEN_KEY],
+        httponly=True,
+        samesite="Strict"
+    )
+    response.set_cookie(
+        service.COOKIE_SESSION,
+        tokens[service.COOKIE_SESSION_KEY],
+        httponly=True,
+        samesite="Strict"
+    )
     return HTTPException(status_code=status.HTTP_200_OK, detail="Logged in successfully")
 
 
@@ -34,12 +45,22 @@ async def cookie_login(
 async def refresh_token(
     request: Request,
     response: Response,
-    session_id: str = Cookie(alias=AuthService.COOKIE_SESSION_ID),
+    session_id: str = Cookie(alias=AuthService.COOKIE_SESSION),
     user: AccessToken = Depends(get_current_user),
     service: AuthService = Depends()
 ):
     fingerprint = get_finger_print(request)
     token = await service.validate_refresh_token(user.user_id, session_id, fingerprint)
-    response.set_cookie(service.COOKIE_SESSION_TOKEN_KEY, token["access-token"], httponly=True, samesite="Strict")
-    response.set_cookie(service.COOKIE_SESSION_ID, token["session-id"], httponly=True, samesite="Strict")
+    response.set_cookie(
+        service.COOKIE_SESSION_TOKEN,
+        token[service.COOKIE_TOKEN_KEY],
+        httponly=True,
+        samesite="Strict"
+    )
+    response.set_cookie(
+        service.COOKIE_SESSION,
+        token[service.COOKIE_SESSION_KEY],
+        httponly=True,
+        samesite="Strict"
+    )
     return HTTPException(status_code=status.HTTP_200_OK, detail="OK")

@@ -1,0 +1,107 @@
+.menu-item {
+    position: relative;
+    text-decoration: none;
+    color: #fff;
+    font-weight: bold;
+    font-size: 16pt;
+    transition: color 0.6s, font-size 0.6s;
+}
+
+.menu-item img {
+    min-width: 30px;
+    min-height: 30px;
+    position: relative;
+    top: 15%;
+    margin-right: 5px;
+    transition: min-width 0.6s, min-height 0.6s, margin-right 0.6s;
+}
+
+
+.confirmation-form {
+    max-width: 320px;
+    margin: 0 auto;
+    background-color: #444;
+    padding: 12px;
+    border-radius: 15px;
+    border: 2px solid #555;
+}
+
+.confirmation-field {
+    display: grid;
+}
+
+button {
+    background-color: transparent;
+    border: none;
+    color: #2970db;
+    margin-top: 10px;
+    cursor: pointer;
+    font-size: 12pt;
+    font-weight: bold;
+}
+
+.blue-btn {
+    border-radius: 7px;
+    padding: 12px;
+    border: 2px solid #2655cf;
+    transform: scale(1);
+    transition: transform 0.3s;
+}
+
+button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.timer {
+    font-weight: bold;
+}
+
+
+.confirmation-code {
+    width: 100%;
+    padding: 10px 12px;
+    margin: 8px 0;
+    box-sizing: border-box;
+    background-color: #666;
+    outline: none;
+    color: #fff;
+    font-size: 14pt;
+    border-radius: 12px;
+    border: 2px solid #555;
+    transform: scale(1);
+    transition: transform 0.3s;
+}
+
+.confirmation-code::-webkit-input-placeholder {
+    color: #ccc;
+}
+
+.confirmation-code::-moz-placeholder {
+    color: #ccc
+}
+
+.confirmation-code:focus {
+    border: 2px solid #2655cf;
+    transform: scale(1.03);
+    transition: transform 0.3s;
+}
+
+.confirmation-code:hover {
+    border: 2px solid #2655cf;
+    transform: scale(1.03);
+    transition: transform 0.3s;
+}
+
+@media (min-width: 720px) {
+    .confirmation-form {
+        max-width: 320px;
+    }
+}
+
+
+@media (min-width: 992px) {
+    .confirmation-form {
+        max-width: 480px;
+    }
+}
