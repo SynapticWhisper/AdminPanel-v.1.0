@@ -1,3 +1,5 @@
+import random
+
 from fastapi import Depends, HTTPException, status
 
 from sqlalchemy import select
@@ -7,7 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.auth import jwt_tools
 from src.database import get_async_session
 from src.users import models
-from src.users.schemas import CreateUser, UpdateUser, UpdatePassword
+from src.users.schemas import CreateUser, UpdateUser, UpdatePassword, User
+from tools.SimpleCache import CacheTool
+
+cache_service = CacheTool("mailing_cache")
 
 
 class UserCRUD:
@@ -85,4 +90,40 @@ class UserCRUD:
         await self.__session.delete(user)
         await self.__session.commit()
         return HTTPException(status_code=status.HTTP_204_NO_CONTENT)
-    
+
+    async def create_verification_code(self, user_id: int) -> dict:
+        user: models.User = await self.read(user_id)
+        user_model: User = User(**user.__dict__)
+        to_str: str = user_model.model_dump_json()
+        code: int = random.randint(10**5, 10**6-1)
+        await cache_service.set_data(to_str, code)
+        result: dict = {
+            "username": user.username,
+            "email": user.email,
+            "code": code
+        }
+        return result
+
+    async def verify_email(self, user_id: int, code: int) -> HTTPException:
+        user = await self.read(user_id)
+
+        try:
+            user_model = User(**user.__dict__)
+            to_str = user_model.model_dump_json()
+
+            code_from_db = await cache_service.get_data(to_str)
+
+            if not code_from_db:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incorrect data")
+            elif code != code_from_db:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Incorrect code")
+
+            await cache_service.del_data(to_str)
+
+            user.email_verified = True
+            await self.__session.commit()
+            return
+        except HTTPException as e:
+            raise e
+        except Exception:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)

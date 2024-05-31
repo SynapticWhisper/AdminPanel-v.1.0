@@ -24,14 +24,18 @@
             <h2>Email Confirmation</h2>
             <p>Please enter the confirmation code sent to your email.</p>
             <form class="confirmation-field"> <!-- Подставьте здесь ссылку на обработчик формы -->
-                <input class="confirmation-code" type="text" name="confirmation-code" id="confirmation-code" placeholder="Confirmation Code" required>
+                <input class="confirmation-code" maxlength="6" type="text" name="confirmation-code" id="confirmation-code" placeholder="Confirmation Code" required>
                 <div class="resend-code">
-                    <button type="button" class="green-btn" id="resend-code" disabled="">Send new code</button>
-                    <span class="timer" id="timer">0:42</span>
+                    <button type="button" id="resend-code" disabled="">Send new code</button>
+                    <span class="timer" id="timer">00:00</span>
                 </div>
-                <button type="submit" class="blue-btn" disabled="">Confirm</button>
+                <button id="send-code" type="button" class="blue-btn" disabled="true">Confirm</button>
             </form>
         </div>
     </div>
 </main>
+{% endblock %}
+
+{% block script %}
+<script src="{{ url_for('static', path='js/email-confirmation.js') }}"></script>
 {% endblock %}

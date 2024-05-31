@@ -55,7 +55,6 @@ class AuthService:
         return hashlib.sha256(
             UserSecret(
                 user_id=user.id,
-                email_verified=user.email_verified,
                 registration_date=user.registration_date,
                 user_role=user.user_role,
                 user_fingerprint=user_fingerprint
@@ -83,7 +82,7 @@ class AuthService:
         except jwt.ExpiredSignatureError:
             raise HTTPException(
                 status_code=status.HTTP_303_SEE_OTHER, 
-                detail="Refrash token validation"
+                detail="Refresh token validation"
             )
         except InvalidTokenError:
             raise self.EXCEPTIONS["UNAUTHORIZED"]
@@ -117,12 +116,10 @@ class AuthService:
         
         try:
             payload = jwt_tools.decode_jwt(token)
-            if payload.get("sub") is None:
-                raise self.EXCEPTIONS["UNAUTHORIZED"]
         except jwt.ExpiredSignatureError:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token expired. Please relogin."
+                detail="Token expired. Please re-login."
             )
         
         try:
@@ -130,8 +127,7 @@ class AuthService:
         except ValidationError:
             raise self.EXCEPTIONS["UNAUTHORIZED"]
         
-        stmt = select(models.User).where(models.User.id == user_id)
-        user = (await self.__session.execute(stmt)).scalar_one_or_none()
+        user: models.User = await self.__get(username=None, user_id=user_id)
         
         if not user:
             raise self.EXCEPTIONS["UNAUTHORIZED"]
@@ -150,8 +146,13 @@ class AuthService:
         }
         return result
     
-    async def __get(self, username: str | None, email: EmailStr | None = None) -> models.User:
-        if username is None and email is None:
+    async def __get(
+            self,
+            username: str | None,
+            email: EmailStr | None = None,
+            user_id: int | None = None
+        ) -> models.User:
+        if username is None and email is None and user_id is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Neither email address nor username were shared"
@@ -159,10 +160,16 @@ class AuthService:
         
         statements = {
             "email": (select(models.User).where(models.User.email == email)),
-            "username": (select(models.User).where(models.User.username == username))
+            "username": (select(models.User).where(models.User.username == username)),
+            "user_id": (select(models.User).where(models.User.id == user_id))
         }
 
-        stmt = statements["email"] if email else statements["username"]
+        if email:
+            stmt = statements["email"]
+        elif username:
+            stmt = statements["username"]
+        else:
+            stmt = statements["user_id"]
 
         user = (await self.__session.execute(stmt)).scalar_one_or_none()
 

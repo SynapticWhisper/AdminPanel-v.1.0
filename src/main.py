@@ -4,6 +4,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.staticfiles import StaticFiles
 from src.auth.router import router as AuthRouter
 from src.users.router import router as UserRouter
+from src.tasks.router import router as TasksRouter
 from src.pages.router import router as PagesRouter
 
 app = FastAPI(
@@ -26,5 +27,6 @@ app.mount("/static", StaticFiles(directory="src/pages/static"), name="static")
 
 app.include_router(AuthRouter)
 app.include_router(UserRouter)
+app.include_router(TasksRouter)
 app.include_router(PagesRouter)
 app.add_middleware(RedirectMiddleware)

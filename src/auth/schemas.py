@@ -2,6 +2,7 @@ from datetime import date
 from pydantic import BaseModel, EmailStr
 from enum import Enum
 
+
 class Roles(str, Enum):
     ADMIN: str = "admin"
     USER: str = "user"
@@ -11,7 +12,7 @@ class FingerPrint(BaseModel):
     # Here you can add as much fields in user "Fingerprint" as you want.
     # More fields - more paranoid user verification.
     # But remember, that any dynamic IP-address or any other dynamic field
-    # forces the user to relogin whent change them
+    # forces the user to re-login when change them
 
     # host: str
     user_agent: str
@@ -21,7 +22,6 @@ class FingerPrint(BaseModel):
 
 class UserSecret(BaseModel):
     user_id: int
-    email_verified: bool
     registration_date: date
     user_role: Roles
 

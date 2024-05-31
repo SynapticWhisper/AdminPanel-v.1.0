@@ -37,33 +37,38 @@ class CreateUser:
         max_length=20,
     )
 
-class UpdateUser(BaseModel):
+
+@dataclass
+class UpdateUser:
     username: Optional[str] = Form(
+        default=None,
         title="Username",
         description="New username or keep field empty if it is not changing",
-        default=None,
         min_length=3,
-        max_length=20
+        max_length=20,
     )
     birth_date: Optional[date] = Field(
+        default=None,
         title="Birth date",
         description="New birth date or keep field empty if it is not changing",
         examples=["YYYY-MM-DD"],
-        default=None
     )
 
-class UpdatePassword(BaseModel, OAuth2PasswordRequestForm):
-    old_password: Annotated[str, MinLen(6), MaxLen(20)] = Form(
+@dataclass
+class UpdatePassword:
+    old_password: str = Form(
+        ...,
         title="Old password",
         description="Your old password",
-        example="password",
+        example="old password",
         min_length=6,
         max_length=20,
     )
-    new_password: Annotated[str, MinLen(6), MaxLen(20)] = Form(
+    new_password: str = Form(
+        ...,
         title="New password",
         description="Choose new security password",
-        example="drowssap",
+        example="new password",
         min_length=6,
         max_length=20,
     )
@@ -75,7 +80,7 @@ class User(BaseModel):
 
     birth_date: date
     registration_date: date
-    last_loggin: Optional[datetime] = None
+    last_login: Optional[datetime] = None
 
     telegram_id: Optional[int] = None
     telegram_username: Optional[str] = None

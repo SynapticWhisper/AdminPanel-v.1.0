@@ -17,7 +17,7 @@ class User(Base):
     # Date fields
     birth_date: date = sa.Column(sa.Date, nullable=False)
     registration_date: date = sa.Column(sa.Date, nullable=False, default=date.today)
-    last_loggin: datetime = sa.Column(sa.DateTime, nullable=True)
+    last_login: datetime = sa.Column(sa.DateTime, nullable=True)
 
     # Telegram
     telegram_id: int = sa.Column(sa.Integer, nullable=True, unique=True)

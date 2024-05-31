@@ -131,7 +131,7 @@ function closeSignUpPopUp() {
 };
 
 async function signInRequest(event) {
-    event.preventDefault();
+    // event.preventDefault();
     const form = document.getElementById("signin-form");
     const errorField = document.getElementById("sign-in-error-message");
     const formData = new FormData(form);
@@ -179,7 +179,7 @@ async function signInRequest(event) {
 };
 
 async function signUpRequest(event) {
-    event.preventDefault();
+    // event.preventDefault();
     const form = document.getElementById("signup-form");
     const errorField = document.getElementById("sign-up-error-message");
     const successField = document.getElementById("sign-up-success-message");
@@ -194,7 +194,7 @@ async function signUpRequest(event) {
         return;
     } else if (formData.get("birthdate") === "") {
         new_birthdate.classList.toggle("incorrect", true);
-        errorField.innerText = "Birthdate field can't be empty!";
+        errorField.innerText = "Birth date field can't be empty!";
         return;
     } else if (formData.get("password") === "") {
         new_password.classList.toggle("incorrect", true);

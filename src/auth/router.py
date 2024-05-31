@@ -41,7 +41,7 @@ async def cookie_login(
     return HTTPException(status_code=status.HTTP_200_OK, detail="Logged in successfully")
 
 
-@router.get("/v1/refresh-token", status_code=status.HTTP_200_OK)
+@router.get("/v1/refresh-token")
 async def refresh_token(
     request: Request,
     response: Response,
@@ -50,17 +50,17 @@ async def refresh_token(
     service: AuthService = Depends()
 ):
     fingerprint = get_finger_print(request)
-    token = await service.validate_refresh_token(user.user_id, session_id, fingerprint)
+    tokens = await service.validate_refresh_token(user.user_id, session_id, fingerprint)
     response.set_cookie(
         service.COOKIE_SESSION_TOKEN,
-        token[service.COOKIE_TOKEN_KEY],
+        tokens[service.COOKIE_TOKEN_KEY],
         httponly=True,
         samesite="Strict"
     )
     response.set_cookie(
         service.COOKIE_SESSION,
-        token[service.COOKIE_SESSION_KEY],
+        tokens[service.COOKIE_SESSION_KEY],
         httponly=True,
         samesite="Strict"
     )
-    return HTTPException(status_code=status.HTTP_200_OK, detail="OK")
+    return HTTPException(status_code=status.HTTP_200_OK)

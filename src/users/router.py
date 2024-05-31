@@ -15,7 +15,6 @@ async def register(
     new_user: CreateUser = Depends(),
     service: UserCRUD = Depends(),
 ):
-    print(1)
     return await service.create(new_user)
 
 
