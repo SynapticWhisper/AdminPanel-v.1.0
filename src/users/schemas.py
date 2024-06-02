@@ -85,7 +85,7 @@ class User(BaseModel):
     telegram_id: Optional[int] = None
     telegram_username: Optional[str] = None
 
-    email_verified: bool
+    email_confirmed: bool
     mailing_allowed: bool
     telegram_mailing_allowed: bool
 

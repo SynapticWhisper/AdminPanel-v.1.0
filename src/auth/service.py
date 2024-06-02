@@ -2,6 +2,7 @@ import jwt
 import uuid
 import hashlib
 
+from typing import Annotated
 from jwt.exceptions import InvalidTokenError
 from datetime import datetime, timedelta, timezone
 from fastapi import Depends, HTTPException, status, Cookie
@@ -12,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth import jwt_tools
-from src.auth.schemas import AccessToken, UserSecret, FingerPrint, RefreshToken
+from src.auth.schemas import AccessToken, UserSecret, FingerPrint, RefreshToken, Tokens
 from src.auth.sessions import SessionService
 from src.database import get_async_session
 from src.users import models
@@ -21,29 +22,43 @@ from src.settings import settings
 # oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/jwt/token")
 
 class AuthService:
-    COOKIE_SESSION_TOKEN: str = "web-app-session-token"
-    COOKIE_SESSION: str = "web-app-session-id"
-    COOKIE_TOKEN_KEY: str = "access-token"
-    COOKIE_SESSION_KEY: str = "session-id"
+    COOKIE_ACCESS_TOKEN: str = "web-app-session-token"
+    COOKIE_SESSION_ID: str = "web-app-session-id"
     
     EXCEPTIONS: dict = {
         "UNAUTHORIZED": HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials.",
+            detail={
+                "error_code": "UNAUTHORIZED",
+                "message":"Could not validate credentials.",
+            },
             headers={
                 "www-Authenticate": 'Bearer'
             }
         ),
         "INCORRECT_DATA": HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password.",
+            detail={
+                "error_code": "UNAUTHORIZED",
+                "message": "Incorrect username or password.",
+            },
             headers={
                 "www-Authenticate": 'Bearer'
             }
         ),
-        "INVALID_PASSWORD_TOKEN": HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid token"
+        "2FA_REQUIRED": HTTPException(
+            status_code=status.HTTP_202_ACCEPTED,
+            detail={
+                "error_code": "2FA_REQUIRED",
+                "message": "Please enter 2FA code from your email address."
+            }
+        ),
+        "EMAIL_CONFIRMATION_REQUIRED": HTTPException(
+            status_code=status.HTTP_202_ACCEPTED,
+            detail={
+                "error_code": "EMAIL_CONFIRMATION_REQUIRED",
+                "message": "Please confirm your email address."
+            }
         ),
     }
 
@@ -62,12 +77,17 @@ class AuthService:
         ).hexdigest()
     
     @classmethod
-    async def create_access_token(cls, user: models.User) -> str:
+    async def del_user_session(cls, user_id: int, session_id: str) -> None:
+        await SessionService().del_user_session(user_id, session_id)
+    
+    @classmethod
+    async def create_access_token(cls, user: models.User, is_verified: bool) -> str:
         payload = {
             "sub": user.id,
             "user": {
                 "user_id": user.id,
-                "email_verified": user.email_verified,
+                "is_verified": is_verified,
+                "email_confirmed": user.email_confirmed,
                 "user_role": user.user_role
             }
         }
@@ -81,16 +101,24 @@ class AuthService:
                 raise self.EXCEPTIONS["UNAUTHORIZED"]
         except jwt.ExpiredSignatureError:
             raise HTTPException(
-                status_code=status.HTTP_303_SEE_OTHER, 
-                detail="Refresh token validation"
+                status_code=status.HTTP_401_UNAUTHORIZED, 
+                detail={
+                    "error_code": "ACCESS_TOKEN_EXPIRED",
+                    "message": "Access token expired! Please refresh token"
+                }
             )
         except InvalidTokenError:
             raise self.EXCEPTIONS["UNAUTHORIZED"]
-        
         try:
             user = AccessToken.model_validate(payload.get("user"))
         except ValidationError:
             raise self.EXCEPTIONS["UNAUTHORIZED"]
+        
+        if not user.email_confirmed:
+            raise self.EXCEPTIONS["EMAIL_CONFIRMATION_REQUIRED"]
+        
+        if not user.is_verified:
+            raise self.EXCEPTIONS["2FA_REQUIRED"]
         
         return user
     
@@ -109,7 +137,12 @@ class AuthService:
         await SessionService().add_refresh_token(user.id, session_id, encoded_jwt)
         return session_id
     
-    async def validate_refresh_token(self, user_id: int, session_id: str, user_fingerprint: FingerPrint):
+    async def validate_refresh_token(
+        self,
+        user_id: int,
+        session_id: str,
+        user_fingerprint: FingerPrint
+    ) -> Tokens:
         token = await SessionService().get_refresh_token(user_id, session_id)
         if not token:
             raise self.EXCEPTIONS["UNAUTHORIZED"]
@@ -118,8 +151,11 @@ class AuthService:
             payload = jwt_tools.decode_jwt(token)
         except jwt.ExpiredSignatureError:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token expired. Please re-login."
+                status_code=status.HTTP_401_UNAUTHORIZED, 
+                detail={
+                    "error_code": "REFRESH_TOKEN_EXPIRED",
+                    "message": "Refresh token expired! Please re-login."
+                }
             )
         
         try:
@@ -136,15 +172,49 @@ class AuthService:
         if not user_secret == _user.user_secret:
             raise self.EXCEPTIONS["UNAUTHORIZED"]
         
-        await SessionService().del_user_session(user.id, session_id)
+        await self.del_user_session(user.id, session_id)
+        
         return await self.create_tokens(user, user_fingerprint)
     
-    async def create_tokens(self, user: models.User, user_fingerprint: FingerPrint) -> dict[str, str]:
-        result = {
-            self.COOKIE_TOKEN_KEY: await self.create_access_token(user),
-            self.COOKIE_SESSION_KEY: await self.create_refresh_token(user, user_fingerprint)
-        }
+    async def create_tokens(self, user: models.User, user_fingerprint: FingerPrint) -> Tokens:
+        exception = None
+        is_verified = True
+        if not user.email_confirmed:
+            exception = self.EXCEPTIONS["EMAIL_CONFIRMATION_REQUIRED"]
+        elif user.two_factor_auth:
+            is_verified = False
+            exception = self.EXCEPTIONS["2FA_REQUIRED"]
+        result = Tokens(
+            exception=exception,
+            access_token=await self.create_access_token(user, is_verified),
+            session_id=await self.create_refresh_token(user, user_fingerprint)
+        )
         return result
+    
+    async def refresh_tokens(
+        self,
+        access_token: str | None,
+        session_id: str | None,
+        user_fingerprint: FingerPrint
+    ) -> Tokens:
+        if access_token is None and session_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={
+                    "error_code": "UNAUTHORIZED",
+                    "message": "No cookie provided."
+                }
+            )
+        try:
+            payload = jwt_tools.decode_jwt(access_token)
+            if payload.get("sub") is None:
+                raise self.EXCEPTIONS["UNAUTHORIZED"]
+        except jwt.ExpiredSignatureError:
+            payload = jwt_tools.decode_jwt(access_token, options={"verify_exp": False})
+        except InvalidTokenError:
+            raise self.EXCEPTIONS["UNAUTHORIZED"]
+        user = AccessToken.model_validate(payload.get("user"))
+        return await self.validate_refresh_token(user.user_id, session_id, user_fingerprint)
     
     async def __get(
             self,
@@ -181,7 +251,7 @@ class AuthService:
 
         return user
     
-    async def authenticate(self, username: str, password: str, fingerprint: FingerPrint) -> str:
+    async def authenticate(self, username: str, password: str, fingerprint: FingerPrint) -> Tokens:
         try:
             user = await self.__get(username=username)
         except HTTPException:
@@ -194,7 +264,9 @@ class AuthService:
 
 
 async def get_current_user(
-        token: str = Cookie(alias=AuthService.COOKIE_SESSION_TOKEN),
+        token: Annotated[str | None, Cookie(alias=AuthService.COOKIE_ACCESS_TOKEN)] = None,
         service: AuthService = Depends()
 ) -> AccessToken:
+    if token is None:
+        raise AuthService.EXCEPTIONS["UNAUTHORIZED"]
     return await service.validate_access_token(token)

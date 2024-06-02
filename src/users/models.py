@@ -24,6 +24,7 @@ class User(Base):
     telegram_username: str = sa.Column(sa.String, nullable=True, unique=True)
 
     # Settings
-    email_verified: bool = sa.Column(sa.Boolean, nullable=False, default=False)
+    two_factor_auth: bool = sa.Column(sa.Boolean, nullable=False, default=False)
+    email_confirmed: bool = sa.Column(sa.Boolean, nullable=False, default=False)
     mailing_allowed: bool = sa.Column(sa.Boolean, nullable=False, default=True)
     telegram_mailing_allowed: bool = sa.Column(sa.Boolean, nullable=False, default=True)

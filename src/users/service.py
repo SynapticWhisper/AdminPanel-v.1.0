@@ -91,8 +91,13 @@ class UserCRUD:
         await self.__session.commit()
         return HTTPException(status_code=status.HTTP_204_NO_CONTENT)
 
-    async def create_verification_code(self, user_id: int) -> dict:
+    async def create_confirmation_code(self, user_id: int) -> dict:
         user: models.User = await self.read(user_id)
+        if user.email_confirmed:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email is already confirmed"
+            )
         user_model: User = User(**user.__dict__)
         to_str: str = user_model.model_dump_json()
         code: int = random.randint(10**5, 10**6-1)
@@ -104,7 +109,7 @@ class UserCRUD:
         }
         return result
 
-    async def verify_email(self, user_id: int, code: int) -> HTTPException:
+    async def confirm_email(self, user_id: int, code: int) -> HTTPException:
         user = await self.read(user_id)
 
         try:
@@ -120,10 +125,10 @@ class UserCRUD:
 
             await cache_service.del_data(to_str)
 
-            user.email_verified = True
+            user.email_confirmed = True
             await self.__session.commit()
-            return
-        except HTTPException as e:
-            raise e
+            return HTTPException(status_code=status.HTTP_307_TEMPORARY_REDIRECT)
+        except HTTPException as exception:
+            raise exception
         except Exception:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)

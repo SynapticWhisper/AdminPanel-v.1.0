@@ -1,3 +1,4 @@
+from typing import Any
 from datetime import date
 from pydantic import BaseModel, EmailStr
 from enum import Enum
@@ -20,6 +21,12 @@ class FingerPrint(BaseModel):
     accept_encoding: str
 
 
+class Tokens(BaseModel):
+    exception: Any | None = None
+    access_token: str
+    session_id: str
+
+
 class UserSecret(BaseModel):
     user_id: int
     registration_date: date
@@ -27,9 +34,11 @@ class UserSecret(BaseModel):
 
     user_fingerprint: FingerPrint
 
+
 class AccessToken(BaseModel):
     user_id: int
-    email_verified: bool
+    is_verified: bool
+    email_confirmed: bool
     user_role: Roles
 
 

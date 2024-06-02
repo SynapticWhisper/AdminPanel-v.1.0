@@ -17,21 +17,28 @@ router = APIRouter(
 )
 
 
-@router.get("/send-confirmation-code", status_code=status.HTTP_200_OK)
-async def get_confirmation_code(
+@router.post("/send-confirmation-code", status_code=status.HTTP_200_OK)
+async def send_confirmation_code(
     user: AccessToken = Depends(get_current_user),
     service: UserCRUD = Depends()
 ):
-    values = await service.create_verification_code(user.user_id)
+    """
+    Handler for sending the email confirmation code.
+
+    Returns:
+    - HTTPException: Confirmation code sent successfully with status code 200.
+    """
+    values = await service.create_confirmation_code(user.user_id)
     email_confirmation_message.delay(**values)
     return HTTPException(status_code=status.HTTP_200_OK)
 
 
-@router.post("/verify-email")
-async def verify_email(
-    code: int = Form(...),
-    user: AccessToken = Depends(get_current_user),
-    user_service: UserCRUD = Depends(),
-):
-    await user_service.verify_email(user.user_id, code)
-    return RedirectResponse("/auth/v1/refresh-token", status_code=status.HTTP_302_FOUND)
+@router.post("/send-2fa-code", status_code=status.HTTP_200_OK)
+async def send_2fa_code():
+    """
+    Handler for sending the 2FA code.
+
+    Returns:
+    - HTTPException: 2FA-code sent successfully with status code 200.
+    """
+    return {"status": "OK"}
