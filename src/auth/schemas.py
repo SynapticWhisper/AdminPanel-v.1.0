@@ -22,9 +22,11 @@ class FingerPrint(BaseModel):
 
 
 class Tokens(BaseModel):
-    exception: Any | None = None
-    access_token: str
     session_id: str
+    access_token: str
+
+class UserTokens(Tokens):
+    token_type: str = "Bearer"
 
 
 class UserSecret(BaseModel):
@@ -44,6 +46,7 @@ class AccessToken(BaseModel):
 
 class RefreshToken(BaseModel):
     session_id: str
+    is_verified: bool
     user_secret: str
 
 

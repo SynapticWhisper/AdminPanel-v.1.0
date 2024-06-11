@@ -1,30 +1,15 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends, Response, status, HTTPException, Request, Cookie
+from fastapi import APIRouter, Depends, Response, status, HTTPException, Request, Cookie, Form
 from fastapi.security import OAuth2PasswordRequestForm
 
-from src.auth.service import AuthService, get_current_user
-from src.auth.schemas import FingerPrint, AccessToken
+from src.auth.service import AuthService, get_current_user, get_current_confirmed_user
+from src.auth.schemas import AccessToken
+from src.users.service import CodeService
 
 router = APIRouter(
     prefix="/auth",
     tags=["Auth"]
 )
-
-def get_finger_print(request: Request) -> FingerPrint:
-    """
-    Function to get the browser fingerprint of the user.
-    
-    Parameters:
-    request (Request): The HTTP request.
-
-    Returns:
-    FingerPrint: Object containing information about User-Agent, Accept-Language, and Accept-Encoding.
-    """
-    return FingerPrint(
-        user_agent=request.headers.get("user-agent"),
-        accept_language=request.headers.get("accept-language"),
-        accept_encoding=request.headers.get("accept-encoding")
-    )
 
 
 @router.post("/v1/login", status_code=status.HTTP_200_OK)
@@ -43,24 +28,9 @@ async def login(
     Returns:
     - HTTPException: Successful login with status code 200.
     """
-    fingerprint = get_finger_print(request)
-    tokens = await service.authenticate(user_data.username, user_data.password, fingerprint)
-    response.set_cookie(
-        service.COOKIE_ACCESS_TOKEN,
-        tokens.access_token,
-        httponly=True,
-        samesite="Strict"
-    )
-    response.set_cookie(
-        service.COOKIE_SESSION_ID,
-        tokens.session_id,
-        httponly=True,
-        samesite="Strict"
-    )
-    if tokens.exception is None:
-        return HTTPException(status_code=status.HTTP_200_OK, detail="Logged in successfully")
-    else:
-        return tokens.exception
+    tokens = await service.authenticate(user_data.username, user_data.password, request)
+    return service.set_cookie(response, tokens)
+    
 
 @router.post("/v1/logout", status_code=status.HTTP_401_UNAUTHORIZED)
 async def logout(
@@ -95,21 +65,26 @@ async def refresh_token(
     Returns:
     - HTTPException: Successful tokens refresh with status code 200.
     """
-    fingerprint = get_finger_print(request)
-    tokens = await service.refresh_tokens(access_token, session_id, fingerprint)
-    response.set_cookie(
-        service.COOKIE_ACCESS_TOKEN,
-        tokens.access_token,
-        httponly=True,
-        samesite="Strict"
-    )
-    response.set_cookie(
-        service.COOKIE_SESSION_ID,
-        tokens.session_id,
-        httponly=True,
-        samesite="Strict"
-    )
-    if tokens.exception is None:
-        return HTTPException(status_code=status.HTTP_200_OK)
-    else:
-        return tokens.exception
+    tokens = await service.refresh_tokens(access_token, session_id, request)
+    return service.set_cookie(response, tokens)
+    
+
+@router.post("/v1/verify-2fa-code", status_code=status.HTTP_200_OK)
+async def send_2fa_code(
+    request: Request,
+    response: Response,
+    code_2fa: int = Form(
+        ...,
+        title="2FA code",
+        description="2FA code from your email",
+        example="123456"
+    ),
+    at_user: AccessToken = Depends(get_current_confirmed_user),
+    access_token: Annotated[str | None, Cookie(alias=AuthService.COOKIE_ACCESS_TOKEN)] = None,
+    session_id: Annotated[str | None, Cookie(alias=AuthService.COOKIE_SESSION_ID)] = None,
+    service: AuthService = Depends(),
+    code_service: CodeService = Depends()
+):
+    is_verified = await code_service.validate_2fa_code(at_user.user_id, code_2fa)
+    tokens = await service.refresh_tokens(access_token, session_id, request, is_verified=is_verified)
+    return service.set_cookie(response, tokens)

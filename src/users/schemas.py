@@ -1,10 +1,14 @@
-from annotated_types import MinLen, MaxLen
 from dataclasses import dataclass
 from datetime import date, datetime
-from pydantic import BaseModel, EmailStr, Field
-from typing import Annotated, Optional
 from fastapi import Form
-from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import BaseModel, EmailStr
+from typing import Optional
+
+class CodeToUser(BaseModel):
+    username: str
+    email: EmailStr
+    code: int
+
 
 @dataclass
 class CreateUser:
@@ -47,7 +51,7 @@ class UpdateUser:
         min_length=3,
         max_length=20,
     )
-    birth_date: Optional[date] = Field(
+    birth_date: Optional[date] = Form(
         default=None,
         title="Birth date",
         description="New birth date or keep field empty if it is not changing",
@@ -86,6 +90,7 @@ class User(BaseModel):
     telegram_username: Optional[str] = None
 
     email_confirmed: bool
+    two_factor_auth: bool
     mailing_allowed: bool
     telegram_mailing_allowed: bool
 

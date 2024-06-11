@@ -5,7 +5,6 @@ from pydantic import EmailStr
 
 from email.message import EmailMessage
 from src.settings import settings
-from src.users.schemas import User
 
 
 SMTP_HOST = "smtp.gmail.com"
@@ -61,6 +60,18 @@ def email_confirmation_message(username: str, email: EmailStr, code: int) -> Non
     message = message_creator(
         subject="Email confirmation",
         template="src/tasks/emailConfirmation.txt",
+        username=username,
+        user_email=email,
+        value=code
+    )
+    send_email(message)
+
+
+@celery.task
+def two_factor_auth_message(username: str, email: EmailStr, code: int) -> None:
+    message = message_creator(
+        subject="2-Factor-Auth",
+        template="src/tasks/2faCode.txt",
         username=username,
         user_email=email,
         value=code

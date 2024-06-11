@@ -7,12 +7,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth import jwt_tools
+from src.auth.schemas import AccessToken 
 from src.database import get_async_session
 from src.users import models
-from src.users.schemas import CreateUser, UpdateUser, UpdatePassword, User
+from src.users.schemas import CreateUser, UpdateUser, UpdatePassword, User, CodeToUser
 from tools.SimpleCache import CacheTool
-
-cache_service = CacheTool("mailing_cache")
 
 
 class UserCRUD:
@@ -90,45 +89,91 @@ class UserCRUD:
         await self.__session.delete(user)
         await self.__session.commit()
         return HTTPException(status_code=status.HTTP_204_NO_CONTENT)
-
-    async def create_confirmation_code(self, user_id: int) -> dict:
+        
+    async def confirm_email(self, user_id: int, code: int) -> HTTPException:
         user: models.User = await self.read(user_id)
+        try:
+            await CodeService().validate_code(user, code)
+            user.email_confirmed = True
+            await self.__session.commit()
+            return HTTPException(
+                status_code=status.HTTP_202_ACCEPTED,
+                detail={
+                    "error_code": "REFRESH_TOKENS",
+                    "message": "Confirmation successful, refresh your tokens please"
+                }
+            )
+        except HTTPException as exception:
+            raise exception
+        except Exception:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+    async def enable_2fa(self, user_id: int, value: bool) -> HTTPException:
+        user = await self.read(user_id)
+        try:
+            user.two_factor_auth = value
+            detail = "2FA enabled" if value else "2FA disabled"
+            await self.__session.commit()
+            return HTTPException(status_code=status.HTTP_200_OK, detail=detail)
+        except HTTPException as exception:
+            raise exception
+        except Exception:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class CodeService:
+    def __init__(self, user_service: UserCRUD = Depends()):
+        self.cache = CacheTool("mailing_cache")
+        self.service = user_service
+        
+    @classmethod
+    async def user_to_str(cls, user: models.User) -> str:
+        user_model: User = User(**user.__dict__)
+        return user_model.model_dump_json()
+
+    async def create_code(self, user: models.User) -> CodeToUser:
+        key = await self.user_to_str(user)
+        code: int = random.randint(10**5, 10**6-1)
+        await self.cache.set_data(key, code)
+        return CodeToUser(
+            username=user.username,
+            email=user.email,
+            code=code
+        )
+
+    async def validate_code(self, user: models.User, code: int) -> bool:
+        key = await self.user_to_str(user)
+        code_from_db = await self.cache.get_data(key)
+        if not code_from_db:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incorrect data")
+        elif code != code_from_db:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Incorrect code")
+        await self.cache.del_data(key)
+        return True
+    
+    async def validate_2fa_code(self, user_id: int, code: int) -> bool:
+        user: models.User = await self.service.read(user_id)
+        return await self.validate_code(user, code)
+
+    async def create_confirmation_code(self, user_id: int) -> CodeToUser:
+        user: models.User = await self.service.read(user_id)
         if user.email_confirmed:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email is already confirmed"
             )
-        user_model: User = User(**user.__dict__)
-        to_str: str = user_model.model_dump_json()
-        code: int = random.randint(10**5, 10**6-1)
-        await cache_service.set_data(to_str, code)
-        result: dict = {
-            "username": user.username,
-            "email": user.email,
-            "code": code
-        }
-        return result
-
-    async def confirm_email(self, user_id: int, code: int) -> HTTPException:
-        user = await self.read(user_id)
-
-        try:
-            user_model = User(**user.__dict__)
-            to_str = user_model.model_dump_json()
-
-            code_from_db = await cache_service.get_data(to_str)
-
-            if not code_from_db:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incorrect data")
-            elif code != code_from_db:
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Incorrect code")
-
-            await cache_service.del_data(to_str)
-
-            user.email_confirmed = True
-            await self.__session.commit()
-            return HTTPException(status_code=status.HTTP_307_TEMPORARY_REDIRECT)
-        except HTTPException as exception:
-            raise exception
-        except Exception:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return await self.create_code(user)
+    
+    async def create_2fa_code(self, at_user: AccessToken) -> CodeToUser:
+        if at_user.is_verified:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User has already been verified"
+            )
+        user: models.User = await self.service.read(at_user.user_id)
+        if not user.two_factor_auth:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="2FA disabled, enable it if you want."
+            )
+        return await self.create_code(user)

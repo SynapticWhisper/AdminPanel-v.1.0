@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Verification</title>
+    <style>
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }}
+
+        .container {{
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: transparent;
+            display: grid;
+        }}
+
+        .container-header {{
+            margin-bottom: 20px;
+            filter: drop-shadow(3px 3px 10px #2655cf);
+            grid-row: 1/1;
+            padding: 20px;
+            border-top: 2px solid #2655cf;
+            border-left: 2px solid #2655cf;
+            border-right: 2px solid #2655cf;
+        }}
+
+        .container-main {{
+            margin: 25px 0;
+            width: 100%;
+            grid-row: 2/2;
+            position: relative;    
+        }}
+
+        .container-footer {{
+            margin-top: 20px;
+            filter: drop-shadow(3px 3px 10px #2655cf);
+            grid-row: 3/3;
+            padding: 20px;
+            border-bottom: 2px solid #2655cf;
+            border-left: 2px solid #2655cf;
+            border-right: 2px solid #2655cf;
+        }}
+
+        h1 {{
+            text-align: center;
+        }}
+
+        p {{
+            font-size: 12pt;
+        }}
+
+
+        .verification-code {{
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 100%;
+            margin: 0 auto;
+            font-size: 24px;
+            font-weight: bold;
+            color: #2655cf;
+        }}
+
+        .verification-code h2 {{
+            text-align: center;
+        }}
+
+        .logo h1 {{
+            margin-left: 8px;
+        }}
+
+        .colored-text {{
+            color: #2655cf;
+        }}
+
+        @media (max-width: 768px) {{
+            .container {{
+                padding: 10px;
+            }}
+
+            .verification-code {{
+                font-size: 20px;
+            }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="container-header">
+            <div class="logo">
+                <h1>A<span class="colored-text">Panel</span></h1>
+            </div>
+            <h2>Hello, {}</h2>
+            <br>
+            <p>Your two-factor authentication (2FA) code is:</p>
+        </div>
+        <div class="container-main">
+            <div class="verification-code">
+                <h2>{}<h2>
+            </div>
+        </div>
+        <div class="container-footer">
+            <p>If you did not attempt to sign in to our service, please ignore this email and change your password for security.</p>
+            <br>
+            <p>Best regards,<br> The A<span class="colored-text">Panel</span> team</p>
+        </div>
+    </div>
+</body>
+</html>
