@@ -55,7 +55,7 @@ def message_creator(
     return email
 
 
-# @celery.task
+@celery.task
 def email_confirmation_message(username: str, email: EmailStr, code: int) -> None:
     message = message_creator(
         subject="Email confirmation",
