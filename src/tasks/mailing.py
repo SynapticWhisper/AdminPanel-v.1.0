@@ -10,7 +10,7 @@ from src.settings import settings
 SMTP_HOST = "smtp.gmail.com"
 SMTP_PORT = 465
 
-celery = Celery("mailing_tasks", broker="redis://localhost:6379")
+celery = Celery("mailing_tasks", broker=settings.redis_url)
 celery.conf.broker_connection_retry_on_startup = True
 
 
@@ -55,7 +55,7 @@ def message_creator(
     return email
 
 
-@celery.task
+# @celery.task
 def email_confirmation_message(username: str, email: EmailStr, code: int) -> None:
     message = message_creator(
         subject="Email confirmation",
@@ -89,4 +89,3 @@ def password_recovery_message(username: str, email: EmailStr, token: str,) -> No
         value=token
     )
     send_email(message)
-

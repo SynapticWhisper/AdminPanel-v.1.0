@@ -14,6 +14,7 @@ class AuthJWT(BaseModel):
 
 class Settings(BaseSettings):
     db_url: str
+    redis_url: str
 
     auth_jwt: AuthJWT = AuthJWT()
 

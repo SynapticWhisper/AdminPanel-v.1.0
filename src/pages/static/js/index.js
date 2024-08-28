@@ -211,7 +211,7 @@ async function signUpRequest(event) {
 
     formData.delete("conf-password")
 
-    const response = await fetch("/user/register", {
+    const response = await fetch("/user/sign-up", {
         method: "POST",
         headers: {
             'accept': 'application/json',
