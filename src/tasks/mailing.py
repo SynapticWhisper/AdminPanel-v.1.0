@@ -1,6 +1,8 @@
+import os
 import smtplib
 
 from celery import Celery
+from jinja2 import Environment, FileSystemLoader
 from pydantic import EmailStr
 
 from email.message import EmailMessage
@@ -13,6 +15,10 @@ SMTP_PORT = 465
 celery = Celery("mailing_tasks", broker=settings.redis_url)
 celery.conf.broker_connection_retry_on_startup = True
 
+current_dir = os.path.dirname(__file__)
+template_dir = os.path.join(current_dir, 'templates')
+absolute_template_dir = os.path.abspath(template_dir)
+env = Environment(loader=FileSystemLoader(absolute_template_dir))
 
 def send_email(message: EmailMessage):
     with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT) as server:
@@ -33,7 +39,7 @@ def message_creator(
 
     Parameters:
     - subject (str): The subject of the message.
-    - template (str): The path to the template file containing the HTML markup of the message.
+    - template (str): The name of the template file containing the HTML markup of the message.
     - username (str): The username to be inserted into the message template.
     - user_email (EmailStr): The email address of the recipient.
     - value (str): The value also to be inserted into the message template.
@@ -43,13 +49,14 @@ def message_creator(
     "From", and "To" fields, as well as HTML content generated based on the provided template.
     """
 
+    template = env.get_template(template)
+    message = template.render(username=username, value=value)
+
     email = EmailMessage()
     email["Subject"] = subject
     email["From"] = settings.smtp_user
     email["To"] = user_email
 
-    with open(template, "r") as tmp:
-        message = tmp.read().format(username, value)
     email.set_content(message, subtype="html")
 
     return email
@@ -59,7 +66,7 @@ def message_creator(
 def email_confirmation_message(username: str, email: EmailStr, code: int) -> None:
     message = message_creator(
         subject="Email confirmation",
-        template="src/tasks/emailConfirmation.txt",
+        template="emailConfirmation.j2",
         username=username,
         user_email=email,
         value=code
@@ -71,7 +78,7 @@ def email_confirmation_message(username: str, email: EmailStr, code: int) -> Non
 def two_factor_auth_message(username: str, email: EmailStr, code: int) -> None:
     message = message_creator(
         subject="2-Factor-Auth",
-        template="src/tasks/2faCode.txt",
+        template="2faCode.j2",
         username=username,
         user_email=email,
         value=code
@@ -79,13 +86,13 @@ def two_factor_auth_message(username: str, email: EmailStr, code: int) -> None:
     send_email(message)
 
 
-@celery.task
-def password_recovery_message(username: str, email: EmailStr, token: str,) -> None:
-    message = message_creator(
-        subject="Password recover",
-        template="src/tasks/passwordRecover.txt",
-        username=username,
-        user_email=email,
-        value=token
-    )
-    send_email(message)
+# @celery.task
+# def password_recovery_message(username: str, email: EmailStr, token: str,) -> None:
+#     message = message_creator(
+#         subject="Password recover",
+#         template="passwordRecover.j2",
+#         username=username,
+#         user_email=email,
+#         value=token
+#     )
+#     send_email(message)
