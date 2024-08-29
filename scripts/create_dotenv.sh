@@ -24,7 +24,8 @@ db_user=$(prompt_input "[*] DB user: ")
 db_password=$(prompt_secret_input "[*] DB password: ")
 echo
 db_name=$(prompt_input "[*] DB: ")
-redis_url=$(prompt_input "[*] Redis url: ")
+redis_host=$(prompt_input "[*] Redis host: ")
+redis_port=$(prompt_input "[*] Redis port: ")
 smtp_user=$(prompt_input "[*] SMTP email: ")
 smtp_password=$(prompt_secret_input "[*] SMTP password: ")
 echo
@@ -39,7 +40,8 @@ output_file=".env"
 
 {
     printf "DB_URL=postgresql+asyncpg://%s:%s@localhost:5432/%s\n" "$db_user" "$db_password" "$db_name"
-    printf "REDIS_URL=%s\n" "$redis_url"
+    printf "REDIS_HOST=%s\n" "$redis_host"
+    printf "REDIS_PORT=%s\n" "$redis_port"
     printf "SMTP_USER=%s\n" "$smtp_user"
     printf "SMTP_PASSWORD=%s\n" "$smtp_password"
 } > "$output_file"
