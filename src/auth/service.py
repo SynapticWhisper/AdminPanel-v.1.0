@@ -64,6 +64,7 @@ class AuthService:
 
     def __init__(self, session: AsyncSession = Depends(get_async_session)):
         self.__session = session
+        self.__redis_sessions = SessionService(settings.redis_host, settings.redis_port)
     
     @classmethod
     def get_finger_print(cls, request: Request) -> FingerPrint:
@@ -114,10 +115,6 @@ class AuthService:
         ).hexdigest()
     
     @classmethod
-    async def del_user_session(cls, user_id: int, session_id: str) -> None:
-        await SessionService().del_user_session(user_id, session_id)
-    
-    @classmethod
     async def create_access_token(cls, user: models.User, is_verified: bool) -> str:
         payload = {
             "sub": user.id,
@@ -130,6 +127,9 @@ class AuthService:
         }
         encoded_jwt = jwt_tools.encode_jwt(payload)
         return encoded_jwt
+    
+    async def del_user_session(self, user_id: int, session_id: str) -> None:
+        await self.__redis_sessions.del_user_session(user_id, session_id)
     
     async def validate_access_token(self, token: str) -> AccessToken:
         try:
@@ -171,7 +171,7 @@ class AuthService:
         }
         exp_timedelta = timedelta(days=settings.auth_jwt.refresh_token_expire_days)
         encoded_jwt = jwt_tools.encode_jwt(payload, expire_timedelta=exp_timedelta)
-        await SessionService().add_refresh_token(user.id, session_id, encoded_jwt)
+        await self.__redis_sessions.add_refresh_token(user.id, session_id, encoded_jwt)
         return session_id
     
     async def validate_refresh_token(
@@ -180,7 +180,7 @@ class AuthService:
         session_id: str,
         user_fingerprint: FingerPrint,
     ) -> tuple[RefreshToken, models.User]:
-        token = await SessionService().get_refresh_token(user_id, session_id)
+        token = await self.__redis_sessions.get_refresh_token(user_id, session_id)
         if not token:
             raise self.EXCEPTIONS["UNAUTHORIZED"]
         

@@ -9,10 +9,11 @@ from tools.SimpleCache.Coder import PickleCoder
 from tools.SimpleCache.KeyBuilder import pickle_keygen, from_string
 from tools.SimpleCache.Redis import RedisBackend
 from tools.SimpleCache.types import Coder, KeyGen
+from src.settings import settings
 
 
-host: str = "localhost"
-port: int = 6379
+host: str = settings.redis_host
+port: int = settings.redis_port
 connection = AsyncRedis(host=host, port=port, decode_responses=False)
     
 

@@ -14,12 +14,17 @@ class AuthJWT(BaseModel):
 
 class Settings(BaseSettings):
     db_url: str
-    redis_url: str
-
+    redis_host: str
+    redis_port: int
     auth_jwt: AuthJWT = AuthJWT()
 
     smtp_user: str
     smtp_password: str
+
+    @property
+    def redis_url(self):
+        return f"redis://{self.redis_host}:{self.redis_port}"
+
 
 settings = Settings(
     _env_file=".env",

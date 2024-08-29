@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DIR="../certs"
+DIR="certs"
 
 if [ ! -d "$DIR" ]; then
     echo "[!] Directory '$DIR' isn't exist. Creating..."

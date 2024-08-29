@@ -30,15 +30,13 @@ class SessionsDictRedisCLI:
 
 
 class CacheService:
-    HOST: str = "localhost"
-    PORT: int = 6379
     FORMATER = "{}_service_::{}"
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, redis_host: str, redis_port: int):
         
         connection = AsyncRedis(
-            host=self.HOST,
-            port=self.PORT,
+            host=redis_host,
+            port=redis_port,
             decode_responses=False
         )
         self.name = name
@@ -70,8 +68,8 @@ class CacheService:
 
 
 class SessionService:
-    def __init__(self):
-        self.cache = CacheService("session")
+    def __init__(self, redis_host: str, redis_port: int):
+        self.cache = CacheService("session", redis_host, redis_port)
     
     async def add_refresh_token(self, user_id: int, session_id: str, refresh_token: str) -> None:
         await self.cache.add_to_dict(user_id, session_id, refresh_token)
